@@ -26,7 +26,7 @@ const Navbar = () => {
 
   const links = [
     { href: "/dashboard", label: "Dashboard", icon: <FiGrid className="h-4 w-4" /> },
-    { href: "/assets", label: "Asset List", icon: <FiList className="h-4 w-4" /> },
+    { href: "/dashboard/assets", label: "Asset List", icon: <FiList className="h-4 w-4" /> },
     { href: "/settings", label: "Settings", icon: <FiSettings className="h-4 w-4" /> },
   ];
 
