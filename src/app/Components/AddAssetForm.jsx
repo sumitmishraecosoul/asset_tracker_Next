@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { FiX, FiChevronDown } from "react-icons/fi";
+import { useToast } from "./ToastProvider";
 
 const AddAssetForm = ({ isOpen, onClose, onSubmit }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const toast = useToast();
   const [formData, setFormData] = useState({
     // Step 1 fields
     category: "",
@@ -91,6 +93,10 @@ const AddAssetForm = ({ isOpen, onClose, onSubmit }) => {
   };
 
   const handleSubmit = async () => {
+    const loadingToastId = toast.loading("Creating asset...", {
+      title: "Adding Asset"
+    });
+
     try {
       // Send data to backend API
       const response = await fetch('/api/assets', {
@@ -104,15 +110,27 @@ const AddAssetForm = ({ isOpen, onClose, onSubmit }) => {
       if (response.ok) {
         const result = await response.json();
         console.log('Asset created successfully:', result);
+        
+        toast.dismiss(loadingToastId);
+        toast.success("Asset created successfully!", {
+          title: "Success"
+        });
+        
         onSubmit(formData); // Call parent callback
         onClose();
       } else {
-        console.error('Failed to create asset');
-        alert('Failed to create asset. Please try again.');
+        const errorData = await response.json().catch(() => ({}));
+        toast.dismiss(loadingToastId);
+        toast.error(errorData.message || 'Failed to create asset. Please try again.', {
+          title: "Error"
+        });
       }
     } catch (error) {
       console.error('Error creating asset:', error);
-      alert('Error creating asset. Please try again.');
+      toast.dismiss(loadingToastId);
+      toast.error('Network error. Please check your connection and try again.', {
+        title: "Connection Error"
+      });
     }
   };
 
@@ -393,17 +411,31 @@ const AddAssetForm = ({ isOpen, onClose, onSubmit }) => {
                       />
                     </div>
 
-                    {/* Processor Generation */}
+                    {/* RAM Slot 1 */}
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Processor Generation
+                        RAM Slot 1
                       </label>
                       <input
                         type="text"
-                        value={formData.processorGeneration}
-                        onChange={(e) => handleInputChange('processorGeneration', e.target.value)}
+                        value={formData.ramSlot1}
+                        onChange={(e) => handleInputChange('ramSlot1', e.target.value)}
                         className="w-full px-3 py-3 text-gray-500 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-700"
-                        placeholder="e.g. 11th Gen"
+                        placeholder="e.g. 8GB"
+                      />
+                    </div>
+
+                    {/* RAM Slot 2 */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        RAM Slot 2
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.ramSlot2}
+                        onChange={(e) => handleInputChange('ramSlot2', e.target.value)}
+                        className="w-full px-3 py-3 text-gray-500 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-700"
+                        placeholder="e.g. 8GB"
                       />
                     </div>
 
@@ -420,34 +452,7 @@ const AddAssetForm = ({ isOpen, onClose, onSubmit }) => {
                         placeholder="e.g. 16GB"
                       />
                     </div>
-
-                    {/* RAM 1 Size */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        RAM 1 Size
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.ram1Size}
-                        onChange={(e) => handleInputChange('ram1Size', e.target.value)}
-                        className="w-full px-3 py-3 text-gray-500 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-700"
-                        placeholder="e.g. 8GB"
-                      />
-                    </div>
-
-                    {/* RAM 2 Size */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        RAM 2 Size
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.ram2Size}
-                        onChange={(e) => handleInputChange('ram2Size', e.target.value)}
-                        className="w-full px-3 py-3 text-gray-500 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-700"
-                        placeholder="e.g. 8GB"
-                      />
-                    </div>
+                    
 
                     {/* Warranty Start */}
                     <div>
@@ -462,19 +467,6 @@ const AddAssetForm = ({ isOpen, onClose, onSubmit }) => {
                       />
                     </div>
 
-                    {/* Warranty Months */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Warranty Months
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.warrantyMonths}
-                        onChange={(e) => handleInputChange('warrantyMonths', e.target.value)}
-                        className="w-full px-3 py-3 text-gray-500 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-slate-700"
-                        placeholder="e.g. 12"
-                      />
-                    </div>
 
                     {/* Warranty Expire */}
                     <div>

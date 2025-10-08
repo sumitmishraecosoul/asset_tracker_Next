@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { FiPlus, FiTrash2, FiX } from "react-icons/fi";
+import { useToast } from "@/app/Components/ToastProvider";
 
 const CategoryManagement = () => {
+  const toast = useToast();
   // State for form inputs
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
@@ -52,60 +54,93 @@ const CategoryManagement = () => {
 
   // API Functions (these would be passed as props in real implementation)
   const handleAddCategory = () => {
-    if (newCategoryName.trim() && newCategoryPrefix.trim()) {
-      const newCategory = {
-        id: Date.now(),
-        name: newCategoryName,
-        prefix: newCategoryPrefix.toUpperCase(),
-        subcategories: [],
-        totalAssets: 0
-      };
-      setCategories([...categories, newCategory]);
-      setNewCategoryName("");
-      setNewCategoryPrefix("");
-      setShowAddCategoryForm(false);
+    if (!newCategoryName.trim() || !newCategoryPrefix.trim()) {
+      toast.error("Please fill in both category name and prefix.", {
+        title: "Validation Error"
+      });
+      return;
     }
+
+    const newCategory = {
+      id: Date.now(),
+      name: newCategoryName,
+      prefix: newCategoryPrefix.toUpperCase(),
+      subcategories: [],
+      totalAssets: 0
+    };
+    
+    setCategories([...categories, newCategory]);
+    setNewCategoryName("");
+    setNewCategoryPrefix("");
+    setShowAddCategoryForm(false);
+    
+    toast.success(`Category "${newCategoryName}" added successfully!`, {
+      title: "Category Added"
+    });
   };
 
   const handleAddSubcategory = (categoryId) => {
-    if (newSubcategoryName.trim() && newSubcategoryCode.trim()) {
-      const category = categories.find(cat => cat.id === categoryId);
-      if (category) {
-        const newSubcategory = {
-          id: Date.now(),
-          name: newSubcategoryName,
-          code: newSubcategoryCode.toUpperCase(),
-          tagPrefix: `${category.prefix}-${newSubcategoryCode.toUpperCase()}`,
-          assetCount: 0
-        };
-        
-        const updatedCategories = categories.map(cat => 
-          cat.id === categoryId 
-            ? { ...cat, subcategories: [...cat.subcategories, newSubcategory] }
-            : cat
-        );
-        setCategories(updatedCategories);
-        setNewSubcategoryName("");
-        setNewSubcategoryCode("");
-        setExpandedCategory(null);
-      }
+    if (!newSubcategoryName.trim() || !newSubcategoryCode.trim()) {
+      toast.error("Please fill in both subcategory name and code.", {
+        title: "Validation Error"
+      });
+      return;
+    }
+
+    const category = categories.find(cat => cat.id === categoryId);
+    if (category) {
+      const newSubcategory = {
+        id: Date.now(),
+        name: newSubcategoryName,
+        code: newSubcategoryCode.toUpperCase(),
+        tagPrefix: `${category.prefix}-${newSubcategoryCode.toUpperCase()}`,
+        assetCount: 0
+      };
+      
+      const updatedCategories = categories.map(cat => 
+        cat.id === categoryId 
+          ? { ...cat, subcategories: [...cat.subcategories, newSubcategory] }
+          : cat
+      );
+      setCategories(updatedCategories);
+      setNewSubcategoryName("");
+      setNewSubcategoryCode("");
+      setExpandedCategory(null);
+      
+      toast.success(`Subcategory "${newSubcategoryName}" added to ${category.name}!`, {
+        title: "Subcategory Added"
+      });
     }
   };
 
   const handleDeleteCategory = (categoryId) => {
-    if (confirm("Are you sure you want to delete this category? This will also delete all subcategories.")) {
-      setCategories(categories.filter(cat => cat.id !== categoryId));
+    const category = categories.find(cat => cat.id === categoryId);
+    if (category) {
+      if (confirm(`Are you sure you want to delete "${category.name}"? This will also delete all subcategories.`)) {
+        setCategories(categories.filter(cat => cat.id !== categoryId));
+        toast.success(`Category "${category.name}" deleted successfully!`, {
+          title: "Category Deleted"
+        });
+      }
     }
   };
 
   const handleDeleteSubcategory = (categoryId, subcategoryId) => {
-    if (confirm("Are you sure you want to delete this subcategory?")) {
-      const updatedCategories = categories.map(cat => 
-        cat.id === categoryId 
-          ? { ...cat, subcategories: cat.subcategories.filter(sub => sub.id !== subcategoryId) }
-          : cat
-      );
-      setCategories(updatedCategories);
+    const category = categories.find(cat => cat.id === categoryId);
+    const subcategory = category?.subcategories.find(sub => sub.id === subcategoryId);
+    
+    if (category && subcategory) {
+      if (confirm(`Are you sure you want to delete "${subcategory.name}"?`)) {
+        const updatedCategories = categories.map(cat => 
+          cat.id === categoryId 
+            ? { ...cat, subcategories: cat.subcategories.filter(sub => sub.id !== subcategoryId) }
+            : cat
+        );
+        setCategories(updatedCategories);
+        toast.success(`Subcategory "${subcategory.name}" deleted successfully!`, {
+          title: "Subcategory Deleted"
+        });
+      }
     }
   };
 

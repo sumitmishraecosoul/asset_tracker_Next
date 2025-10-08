@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { FiX, FiChevronDown } from "react-icons/fi";
+import { useToast } from "./ToastProvider";
 
 const AddEmployeeForm = ({ isOpen, onClose, onSubmit }) => {
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -30,9 +32,15 @@ const AddEmployeeForm = ({ isOpen, onClose, onSubmit }) => {
 
   const handleSubmit = async () => {
     if (!isFormValid()) {
-      alert("Please fill all required fields.");
+      toast.error("Please fill all required fields.", {
+        title: "Validation Error"
+      });
       return;
     }
+
+    const loadingToastId = toast.loading("Creating employee...", {
+      title: "Adding Employee"
+    });
 
     try {
       // Send data to backend API
@@ -47,6 +55,12 @@ const AddEmployeeForm = ({ isOpen, onClose, onSubmit }) => {
       if (response.ok) {
         const result = await response.json();
         console.log('Employee created successfully:', result);
+        
+        toast.dismiss(loadingToastId);
+        toast.success("Employee created successfully!", {
+          title: "Success"
+        });
+        
         onSubmit(formData); // Call parent callback
         onClose();
         // Reset form
@@ -57,12 +71,18 @@ const AddEmployeeForm = ({ isOpen, onClose, onSubmit }) => {
           phoneNumber: ""
         });
       } else {
-        console.error('Failed to create employee');
-        alert('Failed to create employee. Please try again.');
+        const errorData = await response.json().catch(() => ({}));
+        toast.dismiss(loadingToastId);
+        toast.error(errorData.message || 'Failed to create employee. Please try again.', {
+          title: "Error"
+        });
       }
     } catch (error) {
       console.error('Error creating employee:', error);
-      alert('Error creating employee. Please try again.');
+      toast.dismiss(loadingToastId);
+      toast.error('Network error. Please check your connection and try again.', {
+        title: "Connection Error"
+      });
     }
   };
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FiSearch, FiArrowLeft, FiArrowRight, FiEye } from "react-icons/fi";
+import { useRouter } from "next/navigation";
+import { FiSearch, FiArrowLeft, FiArrowRight, FiEye, FiX } from "react-icons/fi";
 
 const sampleRows = [
   {
@@ -86,11 +87,16 @@ const HeaderCell = ({ children, className }) => (
 );
 
 const AssetTable = () => {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [subCategoryFilter, setSubCategoryFilter] = useState("All");
   const [assetStates, setAssetStates] = useState({});
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [isCheckinOpen, setIsCheckinOpen] = useState(false);
+  const [activeAssetId, setActiveAssetId] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState("");
 
   const categories = useMemo(() => {
     return Array.from(new Set(sampleRows.map((r) => r.category)));
@@ -98,6 +104,15 @@ const AssetTable = () => {
   const subCategories = useMemo(() => {
     return Array.from(new Set(sampleRows.map((r) => r.subCategory)));
   }, []);
+
+  const employees = useMemo(() => [
+    "John Smith",
+    "Sarah Johnson",
+    "Mike Wilson",
+    "Emily Davis",
+    "David Brown",
+    "Ava Thompson",
+  ], []);
 
   const filtered = useMemo(() => {
     return sampleRows.filter((r) => {
@@ -125,11 +140,41 @@ const AssetTable = () => {
     });
   }, [query, statusFilter, categoryFilter, subCategoryFilter]);
 
-  const toggleAssetState = (assetTagId) => {
+  const openAssignModal = (assetTagId) => {
+    setActiveAssetId(assetTagId);
+    setSelectedEmployee("");
+    setIsAssignOpen(true);
+  };
+
+  const openCheckinModal = (assetTagId) => {
+    setActiveAssetId(assetTagId);
+    setIsCheckinOpen(true);
+  };
+
+  const closeModals = () => {
+    setIsAssignOpen(false);
+    setIsCheckinOpen(false);
+    setActiveAssetId("");
+    setSelectedEmployee("");
+  };
+
+  const handleAssign = () => {
+    if (!selectedEmployee) return;
     setAssetStates(prev => ({
       ...prev,
-      [assetTagId]: !prev[assetTagId]
+      [activeAssetId]: true,
     }));
+    closeModals();
+  };
+
+  const handleCheckinConfirm = (confirm) => {
+    if (confirm) {
+      setAssetStates(prev => ({
+        ...prev,
+        [activeAssetId]: false,
+      }));
+    }
+    closeModals();
   };
 
   return (
@@ -211,24 +256,25 @@ const AssetTable = () => {
                 <td className="py-3 px-4">
                   <div className="flex items-center justify-end gap-2">
                     <button 
+                      onClick={() => router.push(`/dashboard/assets/${encodeURIComponent(r.assetTagId)}`)}
                       className="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-700 transition-all duration-200 shadow-sm hover:shadow-md"
                       aria-label="View asset details"
                     >
                       <FiEye className="h-5 w-5" />
                     </button>
                     <button 
-                      onClick={() => toggleAssetState(r.assetTagId)}
+                      onClick={() => (assetStates[r.assetTagId] ? openCheckinModal(r.assetTagId) : openAssignModal(r.assetTagId))}
                       className={`h-10 w-10 inline-flex items-center justify-center rounded-full transition-all duration-200 ${
-                        assetStates[r.assetTagId] 
-                          ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600' 
-                          : 'bg-blue-500 text-white shadow-lg shadow-blue-500/25 hover:bg-blue-600'
+                        assetStates[r.assetTagId]
+                          ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25 hover:bg-blue-600'
+                          : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600'
                       }`}
                       aria-label={assetStates[r.assetTagId] ? "Toggle to left" : "Toggle to right"}
                     >
                       {assetStates[r.assetTagId] ? (
-                        <FiArrowLeft className="h-5 w-5" />
-                      ) : (
                         <FiArrowRight className="h-5 w-5" />
+                      ) : (
+                        <FiArrowLeft className="h-5 w-5" />
                       )}
                     </button>
                   </div>
@@ -238,6 +284,62 @@ const AssetTable = () => {
           </tbody>
         </table>
       </div>
+      
+      {/* Assign Modal */}
+      {isAssignOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">Assign to</h3>
+              <button onClick={closeModals} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"><FiX className="h-5 w-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Employee</label>
+                <select
+                  value={selectedEmployee}
+                  onChange={(e) => setSelectedEmployee(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300"
+                >
+                  <option value="">Select employee</option>
+                  {employees.map((emp) => (
+                    <option key={emp} value={emp}>{emp}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-slate-200">
+              <button onClick={closeModals} className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Cancel</button>
+              <button
+                onClick={handleAssign}
+                disabled={!selectedEmployee}
+                className={`px-4 py-2 rounded-lg ${selectedEmployee ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
+              >
+                Assign Asset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Check-in Confirmation Modal */}
+      {isCheckinOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-[2px] p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl ring-1 ring-slate-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">Check-in Asset</h3>
+              <button onClick={closeModals} className="p-2 rounded-lg text-slate-500 hover:bg-slate-100"><FiX className="h-5 w-5" /></button>
+            </div>
+            <div className="p-5">
+              <p className="text-slate-700">Are you sure you want to check-in this asset?</p>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-slate-200">
+              <button onClick={() => handleCheckinConfirm(false)} className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">No</button>
+              <button onClick={() => handleCheckinConfirm(true)} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Yes, Check-in</button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
