@@ -1,12 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiPlus, FiUsers } from "react-icons/fi";
 import EmployeeTable from "@/app/Components/EmployeeTable";
 import AddEmployeeForm from "@/app/Components/AddEmployeeForm";
+import employeeService from "../../../../../services/employeeService";
 
 const EmployeeManagement = () => {
   const [showAddUserForm, setShowAddUserForm] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        setLoading(true);
+        const response = await employeeService.getAllEmployees();
+        const employeesData = response?.data?.data || response?.data || [];
+        setEmployees(employeesData);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmployees();
+  }, []);
 
   const handleAddUser = () => {
     setShowAddUserForm(true);
@@ -14,11 +34,21 @@ const EmployeeManagement = () => {
 
   const handleEmployeeSubmit = (employeeData) => {
     console.log("New employee added:", employeeData);
-    // Here you would typically:
-    // - Refresh the employee list
-    // - Update the EmployeeTable state
-    // - Show success notification
-    // - Handle any errors
+    // Refresh the employee list
+    const fetchEmployees = async () => {
+      try {
+        const response = await employeeService.getAllEmployees();
+        const employeesData = response?.data?.data || response?.data || [];
+        setEmployees(employeesData);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      }
+    };
+    fetchEmployees();
+  };
+
+  const handleEmployeesChange = (updatedEmployees) => {
+    setEmployees(updatedEmployees);
   };
 
   return (
@@ -38,44 +68,7 @@ const EmployeeManagement = () => {
         </button>
       </div>
 
-      {/* Employee Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white">
-              <FiUsers className="h-6 w-6" />
-            </div>
-            <div>
-              <h4 className="text-2xl font-bold text-slate-900">8</h4>
-              <p className="text-sm text-slate-600">Total Employees</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center text-white">
-              <FiUsers className="h-6 w-6" />
-            </div>
-            <div>
-              <h4 className="text-2xl font-bold text-slate-900">6</h4>
-              <p className="text-sm text-slate-600">Active Departments</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center text-white">
-              <FiUsers className="h-6 w-6" />
-            </div>
-            <div>
-              <h4 className="text-2xl font-bold text-slate-900">2</h4>
-              <p className="text-sm text-slate-600">IT Department</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Statistics temporarily hidden */}
 
       {/* Employee Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -92,7 +85,7 @@ const EmployeeManagement = () => {
         </div>
         
         <div className="p-0">
-          <EmployeeTable />
+          <EmployeeTable employees={employees} onEmployeesChange={handleEmployeesChange} />
         </div>
       </div>
 

@@ -1,66 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { FiEdit2, FiEye, FiSearch, FiUser, FiX } from "react-icons/fi";
 
-const sampleEmployees = [
-  {
-    id: 1,
-    name: "John Smith",
-    email: "john.smith@company.com",
-    department: "IT Department",
-    phoneNumber: "+1 (555) 123-4567",
-  },
-  {
-    id: 2,
-    name: "Sarah Johnson",
-    email: "sarah.johnson@company.com",
-    department: "Finance",
-    phoneNumber: "+1 (555) 234-5678",
-  },
-  {
-    id: 3,
-    name: "Mike Wilson",
-    email: "mike.wilson@company.com",
-    department: "Marketing",
-    phoneNumber: "+1 (555) 345-6789",
-  },
-  {
-    id: 4,
-    name: "Emily Davis",
-    email: "emily.davis@company.com",
-    department: "HR",
-    phoneNumber: "+1 (555) 456-7890",
-  },
-  {
-    id: 5,
-    name: "David Brown",
-    email: "david.brown@company.com",
-    department: "IT Department",
-    phoneNumber: "+1 (555) 567-8901",
-  },
-  {
-    id: 6,
-    name: "Lisa Anderson",
-    email: "lisa.anderson@company.com",
-    department: "Sales",
-    phoneNumber: "+1 (555) 678-9012",
-  },
-  {
-    id: 7,
-    name: "Robert Taylor",
-    email: "robert.taylor@company.com",
-    department: "Operations",
-    phoneNumber: "+1 (555) 789-0123",
-  },
-  {
-    id: 8,
-    name: "Jennifer Martinez",
-    email: "jennifer.martinez@company.com",
-    department: "Finance",
-    phoneNumber: "+1 (555) 890-1234",
-  },
-];
 
 const departmentBadge = (department) => {
   const colorMap = {
@@ -88,30 +30,35 @@ const HeaderCell = ({ children, className }) => (
   </th>
 );
 
-const EmployeeTable = () => {
+const EmployeeTable = ({ employees: initialEmployees = [], onEmployeesChange }) => {
   const [query, setQuery] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("All");
-  const [employees, setEmployees] = useState(sampleEmployees);
+  // Department filter removed
+  const [employees, setEmployees] = useState(initialEmployees);
+
+  // Sync with prop changes
+  useEffect(() => {
+    setEmployees(initialEmployees);
+  }, [initialEmployees]);
 
   const handleDeleteEmployee = (employeeId) => {
-    setEmployees(prevEmployees => prevEmployees.filter(emp => emp.id !== employeeId));
+    const updatedEmployees = employees.filter(emp => emp.id !== employeeId);
+    setEmployees(updatedEmployees);
+    if (onEmployeesChange) {
+      onEmployeesChange(updatedEmployees);
+    }
   };
 
-  const departments = useMemo(() => {
-    return Array.from(new Set(employees.map((emp) => emp.department)));
-  }, [employees]);
+  // Departments memo removed
 
   const filtered = useMemo(() => {
-    return employees.filter((emp) => {
+    return (employees || []).filter((emp) => {
       const matchesQuery =
         !query ||
         emp.name.toLowerCase().includes(query.toLowerCase());
 
-      const matchesDepartment = departmentFilter === "All" || emp.department === departmentFilter;
-
-      return matchesQuery && matchesDepartment;
+      return matchesQuery;
     });
-  }, [query, departmentFilter, employees]);
+  }, [query, employees]);
 
   return (
     <section className="rounded-2xl bg-white ring-1 ring-slate-200/70 shadow-sm">
@@ -126,18 +73,7 @@ const EmployeeTable = () => {
           />
         </div>
 
-        <div className="w-full lg:w-auto">
-          <select
-            className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200 shadow-sm w-full lg:w-auto"
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-          >
-            <option value="All">All Departments</option>
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>{dept}</option>
-            ))}
-          </select>
-        </div>
+        {/* Department filter removed */}
       </div>
 
       <div className="overflow-auto max-h-[540px]">

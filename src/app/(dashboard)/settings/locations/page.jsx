@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiPlus, FiX, FiMapPin, FiHome } from "react-icons/fi";
+import locationService from "../../../../../services/locationService";
 
 const LocationsSitesManagement = () => {
   // State for form inputs
@@ -12,75 +13,44 @@ const LocationsSitesManagement = () => {
   const [showAddLocationForm, setShowAddLocationForm] = useState(false);
   const [showAddSiteForm, setShowAddSiteForm] = useState(false);
 
-  // Sample data - this would come from props/API
-  const [locations, setLocations] = useState([
-    {
-      id: 1,
-      name: "Head Office",
-      address: "123 Business Street, Downtown, City 12345",
-      assetCount: 245,
-      siteCount: 3
-    },
-    {
-      id: 2,
-      name: "Branch Office",
-      address: "456 Corporate Avenue, Midtown, City 12345",
-      assetCount: 189,
-      siteCount: 2
-    },
-    {
-      id: 3,
-      name: "Remote Office",
-      address: "789 Remote Boulevard, Suburb, City 12345",
-      assetCount: 76,
-      siteCount: 1
-    }
-  ]);
+  const [locations, setLocations] = useState([]);
+  const [sites, setSites] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [sites, setSites] = useState([
-    {
-      id: 1,
-      name: "Floor 1 - Reception",
-      location: "Head Office",
-      assetCount: 45,
-      department: "Reception"
-    },
-    {
-      id: 2,
-      name: "Floor 2 - IT Department",
-      location: "Head Office",
-      assetCount: 89,
-      department: "IT"
-    },
-    {
-      id: 3,
-      name: "Floor 3 - Finance",
-      location: "Head Office",
-      assetCount: 67,
-      department: "Finance"
-    },
-    {
-      id: 4,
-      name: "Floor 1 - Sales",
-      location: "Branch Office",
-      assetCount: 34,
-      department: "Sales"
-    },
-    {
-      id: 5,
-      name: "Floor 2 - Marketing",
-      location: "Branch Office",
-      assetCount: 28,
-      department: "Marketing"
-    },
-    {
-      id: 6,
-      name: "Remote Workspace",
-      location: "Remote Office",
-      assetCount: 12,
-      department: "Remote"
-    }
-  ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await locationService.getAllLocations();
+        const locationsData = response?.data?.data || response?.data || [];
+        
+        setLocations(locationsData);
+        
+        // Derive sites from locations (as mentioned in assets page)
+        const siteOptions = [];
+        const seen = new Set();
+        locationsData.forEach(location => {
+          if (location.name && !seen.has(location.name)) {
+            seen.add(location.name);
+            siteOptions.push({
+              id: location.id,
+              name: location.name,
+              location: location.name,
+              assetCount: 0, // This would need to be calculated from backend
+              department: "General"
+            });
+          }
+        });
+        setSites(siteOptions);
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // API Functions (these would be passed as props in real implementation)
   const handleAddLocation = () => {
@@ -127,6 +97,16 @@ const LocationsSitesManagement = () => {
       setSites(sites.filter(site => site.id !== siteId));
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-slate-600">Loading locations...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

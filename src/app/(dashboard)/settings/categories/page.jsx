@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiPlus, FiTrash2, FiX } from "react-icons/fi";
 import { useToast } from "@/app/Components/ToastProvider";
+import categoryService from "../../../../../services/categoryService";
+import subCategoryService from "../../../../../services/subCategoryService";
 
 const CategoryManagement = () => {
   const toast = useToast();
@@ -14,43 +16,42 @@ const CategoryManagement = () => {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
 
-  // Sample data - this would come from props/API
-  const [categories, setCategories] = useState([
-    {
-      id: 1,
-      name: "Computer Assets",
-      prefix: "CA",
-      subcategories: [
-        { id: 1, name: "Laptop", code: "LAP", tagPrefix: "CA-LAP", assetCount: 145 },
-        { id: 2, name: "Desktop", code: "DESK", tagPrefix: "CA-DESK", assetCount: 89 },
-        { id: 3, name: "Server", code: "SRV", tagPrefix: "CA-SRV", assetCount: 12 }
-      ],
-      totalAssets: 246
-    },
-    {
-      id: 2,
-      name: "External Equipment",
-      prefix: "EE",
-      subcategories: [
-        { id: 4, name: "Keyboard", code: "KBD", tagPrefix: "EE-KBD", assetCount: 203 },
-        { id: 5, name: "Mouse", code: "MSE", tagPrefix: "EE-MSE", assetCount: 198 },
-        { id: 6, name: "LCD Monitor", code: "LCD", tagPrefix: "EE-LCD", assetCount: 156 },
-        { id: 7, name: "Charger", code: "CHG", tagPrefix: "EE-CHG", assetCount: 87 },
-        { id: 8, name: "Bag", code: "BAG", tagPrefix: "EE-BAG", assetCount: 45 }
-      ],
-      totalAssets: 689
-    },
-    {
-      id: 3,
-      name: "Office Supplies",
-      prefix: "LM",
-      subcategories: [
-        { id: 9, name: "Printer", code: "PRT", tagPrefix: "LM-PRT", assetCount: 23 },
-        { id: 10, name: "Scanner", code: "SCN", tagPrefix: "LM-SCN", assetCount: 15 }
-      ],
-      totalAssets: 38
-    }
-  ]);
+  const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [categoriesRes, subCategoriesRes] = await Promise.all([
+          categoryService.getAllCategories(),
+          subCategoryService.getAllSubcategories()
+        ]);
+        
+        const categoriesData = categoriesRes?.data?.data || categoriesRes?.data || [];
+        const subCategoriesData = subCategoriesRes?.data?.data || subCategoriesRes?.data || [];
+        
+        
+        // Structure the data properly - attach subcategories to their parent categories
+        const structuredCategories = (categoriesData || []).map(category => ({
+          ...category,
+          subcategories: (subCategoriesData || []).filter(sub => sub.categoryId === category.id) || [],
+          totalAssets: 0 // This would need to be calculated from backend
+        }));
+        
+        setCategories(structuredCategories);
+        setSubCategories(subCategoriesData);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        toast.error('Failed to load categories', { title: 'Error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // API Functions (these would be passed as props in real implementation)
   const handleAddCategory = () => {
@@ -148,6 +149,16 @@ const CategoryManagement = () => {
     setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-slate-600">Loading categories...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -219,7 +230,7 @@ const CategoryManagement = () => {
 
       {/* Categories List */}
       <div className="space-y-4">
-        {categories.map((category) => (
+        {categories && categories.length > 0 ? categories.map((category) => (
           <div key={category.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             {/* Category Header */}
             <div className="p-6 border-b border-slate-200">
@@ -231,7 +242,7 @@ const CategoryManagement = () => {
                   <div>
                     <h4 className="text-lg font-semibold text-slate-900">{category.name}</h4>
                     <p className="text-sm text-slate-600">
-                      {category.subcategories.length} subcategories • {category.totalAssets} assets
+                      {category.subcategories?.length || 0} subcategories • {category.totalAssets || 0} assets
                     </p>
                   </div>
                 </div>
@@ -309,7 +320,7 @@ const CategoryManagement = () => {
             {/* Subcategories List */}
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {category.subcategories.map((subcategory) => (
+                {category.subcategories && category.subcategories.length > 0 ? category.subcategories.map((subcategory) => (
                   <div key={subcategory.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                     <div className="flex items-center justify-between mb-3">
                       <div className="w-8 h-8 bg-slate-400 rounded flex items-center justify-center text-white text-xs font-bold">
@@ -325,16 +336,26 @@ const CategoryManagement = () => {
                     </div>
                     <h6 className="font-medium text-slate-900 mb-1">{subcategory.name}</h6>
                     <p className="text-sm text-slate-600 mb-2">{subcategory.tagPrefix}</p>
-                    <p className="text-sm font-semibold text-slate-700">{subcategory.assetCount} assets</p>
+                    <p className="text-sm font-semibold text-slate-700">{subcategory.assetCount || 0} assets</p>
                   </div>
-                ))}
+                )) : (
+                  <div className="col-span-full text-center py-8 text-slate-500">
+                    No subcategories found. Click the + button to add one.
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        ))}
+        )) : (
+          <div className="text-center py-12">
+            <div className="text-slate-500 mb-4">No categories found</div>
+            <p className="text-sm text-slate-400">Click "Add Category" to create your first category</p>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default CategoryManagement;
+

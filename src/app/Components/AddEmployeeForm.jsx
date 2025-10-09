@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FiX, FiChevronDown } from "react-icons/fi";
 import { useToast } from "./ToastProvider";
+import employeeService from "../../../services/employeeService";
 
 const AddEmployeeForm = ({ isOpen, onClose, onSubmit }) => {
   const toast = useToast();
@@ -13,15 +14,8 @@ const AddEmployeeForm = ({ isOpen, onClose, onSubmit }) => {
     phoneNumber: ""
   });
 
-  // Sample data - this would come from backend API
-  const departments = [
-    { id: 1, name: "IT Department" },
-    { id: 2, name: "HR Department" },
-    { id: 3, name: "Finance Department" },
-    { id: 4, name: "Marketing Department" },
-    { id: 5, name: "Sales Department" },
-    { id: 6, name: "Operations Department" }
-  ];
+  // Departments will be passed via props in future when backend is ready
+  const departments = [];
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -43,17 +37,8 @@ const AddEmployeeForm = ({ isOpen, onClose, onSubmit }) => {
     });
 
     try {
-      // Send data to backend API
-      const response = await fetch('/api/employees', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
+      const { data: result } = await employeeService.createEmployee(formData);
+      if (result) {
         console.log('Employee created successfully:', result);
         
         toast.dismiss(loadingToastId);
@@ -70,19 +55,11 @@ const AddEmployeeForm = ({ isOpen, onClose, onSubmit }) => {
           department: "",
           phoneNumber: ""
         });
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        toast.dismiss(loadingToastId);
-        toast.error(errorData.message || 'Failed to create employee. Please try again.', {
-          title: "Error"
-        });
       }
     } catch (error) {
       console.error('Error creating employee:', error);
       toast.dismiss(loadingToastId);
-      toast.error('Network error. Please check your connection and try again.', {
-        title: "Connection Error"
-      });
+      toast.error(error?.response?.data?.message || 'Failed to create employee. Please try again.', { title: "Error" });
     }
   };
 

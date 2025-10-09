@@ -7,8 +7,8 @@ const SettingsPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to categories page by default
-    router.push("/settings/categories");
+    // Redirect to employees page by default
+    router.push("/settings/employees");
   }, [router]);
 
   return null;

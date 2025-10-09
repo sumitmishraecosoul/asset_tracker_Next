@@ -1,25 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { FiTag, FiMapPin, FiUsers, FiSettings } from "react-icons/fi";
+import { FiSettings } from "react-icons/fi";
 
 const SettingTabSelector = ({ activeTab, onTabChange }) => {
   const tabs = [
-    {
-      id: "categories",
-      label: "Categories & Tags",
-      icon: <FiTag className="h-4 w-4" />,
-    },
-    {
-      id: "locations",
-      label: "Locations & Sites",
-      icon: <FiMapPin className="h-4 w-4" />,
-    },
-    {
-      id: "employees",
-      label: "Employee Management",
-      icon: <FiSettings className="h-4 w-4" />,
-    },
+    // { id: "categories", label: "Categories & Tags", icon: <FiTag className="h-4 w-4" /> },
+    // { id: "locations", label: "Locations & Sites", icon: <FiMapPin className="h-4 w-4" /> },
+    { id: "employees", label: "Employee Management", icon: <FiSettings className="h-4 w-4" /> },
   ];
 
   return (

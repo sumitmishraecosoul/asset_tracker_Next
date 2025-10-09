@@ -9,11 +9,11 @@ const SettingsLayout = ({ children }) => {
 
   // Determine active tab based on current path
   const getActiveTab = () => {
-    if (pathname.includes("/categories")) return "categories";
-    if (pathname.includes("/locations")) return "locations";
-    if (pathname.includes("/users")) return "users";
+    // if (pathname.includes("/categories")) return "categories";
+    // if (pathname.includes("/locations")) return "locations";
+    // if (pathname.includes("/users")) return "users";
     if (pathname.includes("/employees")) return "employees";
-    return "categories"; // default
+    return "employees"; // default to employees only
   };
 
   const handleTabChange = (tabId) => {

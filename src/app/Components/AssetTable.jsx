@@ -1,72 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FiSearch, FiArrowLeft, FiArrowRight, FiEye, FiX } from "react-icons/fi";
+import employeeService from "../../../services/employeeService";
+import assetService from "../../../services/assetService";
 
-const sampleRows = [
-  {
-    status: "Assigned",
-    assetTagId: "CA-LAP-001",
-    model: "Dell Latitude 5520",
-    category: "Computer Assets",
-    subCategory: "Laptop",
-    location: "Floor 2",
-    site: "Head Office",
-    assignedTo: "John Smith",
-    department: "IT Department",
-  },
-  {
-    status: "Available",
-    assetTagId: "CA-DESK-045",
-    model: "HP EliteDesk 800",
-    category: "Computer Assets",
-    subCategory: "Desktop",
-    location: "Floor 1",
-    site: "Head Office",
-    assignedTo: "Unassigned",
-    department: "HR",
-  },
-  {
-    status: "Assigned",
-    assetTagId: "EE-KBD-023",
-    model: "Logitech MX Keys",
-    category: "External Equipment",
-    subCategory: "Keyboard",
-    location: "Floor 3",
-    site: "Branch Office",
-    assignedTo: "Sarah Johnson",
-    department: "Finance",
-  },
-  {
-    status: "Maintenance",
-    assetTagId: "EE-LCD-078",
-    model: "Dell UltraSharp U2720Q",
-    category: "External Equipment",
-    subCategory: "LCD Monitor",
-    location: "Floor 2",
-    site: "Head Office",
-    assignedTo: "Unassigned",
-    department: "IT Department",
-  },
-  {
-    status: "Assigned",
-    assetTagId: "CA-LAP-089",
-    model: "MacBook Pro 16\"",
-    category: "Computer Assets",
-    subCategory: "Laptop",
-    location: "Floor 4",
-    site: "Head Office",
-    assignedTo: "Mike Wilson",
-    department: "Marketing",
-  },
-];
 
 const statusBadge = (status) => {
   const map = {
     Assigned: "bg-blue-50 text-blue-700 border-blue-200",
     Available: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    Maintenance: "bg-orange-50 text-orange-700 border-orange-200",
+    "Under Maintenance": "bg-orange-50 text-orange-700 border-orange-200",
     Broken: "bg-rose-50 text-rose-700 border-rose-200",
   };
   const cls = map[status] || "bg-slate-50 text-slate-700 border-slate-200";
@@ -86,7 +31,7 @@ const HeaderCell = ({ children, className }) => (
   </th>
 );
 
-const AssetTable = () => {
+const AssetTable = ({ assets = [] }) => {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -99,23 +44,52 @@ const AssetTable = () => {
   const [selectedEmployee, setSelectedEmployee] = useState("");
 
   const categories = useMemo(() => {
-    return Array.from(new Set(sampleRows.map((r) => r.category)));
-  }, []);
+    return Array.from(new Set((assets || []).map((r) => 
+      typeof r.category === 'object' ? r.category?.name : r.category
+    ).filter(Boolean)));
+  }, [assets]);
   const subCategories = useMemo(() => {
-    return Array.from(new Set(sampleRows.map((r) => r.subCategory)));
+    return Array.from(new Set((assets || []).map((r) => 
+      typeof r.subCategory === 'object' ? r.subCategory?.name : r.subCategory
+    ).filter(Boolean)));
+  }, [assets]);
+
+  const [employees, setEmployees] = useState([]); // [{id, name}]
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await employeeService.getAllEmployees();
+        const list = res?.data?.data || res?.data || [];
+        const items = Array.isArray(list)
+          ? list
+              .map(e => ({ id: e?.id, name: e?.name }))
+              .filter(e => e.id != null && e.name)
+          : [];
+        if (mounted) setEmployees(items);
+      } catch (e) {
+        // silently ignore in UI; dropdown will be empty
+        if (mounted) setEmployees([]);
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
-  const employees = useMemo(() => [
-    "John Smith",
-    "Sarah Johnson",
-    "Mike Wilson",
-    "Emily Davis",
-    "David Brown",
-    "Ava Thompson",
-  ], []);
+  // Initialize assigned state from backend data so it survives refresh
+  useEffect(() => {
+    const initial = {};
+    (assets || []).forEach((a) => {
+      const key = a.id ?? a.assetId ?? a.assetTagId;
+      if (key != null) {
+        initial[key] = Boolean(a.checkOut) || String(a.status).toLowerCase() === 'assigned';
+      }
+    });
+    setAssetStates(initial);
+  }, [assets]);
 
   const filtered = useMemo(() => {
-    return sampleRows.filter((r) => {
+    return (assets || []).filter((r) => {
       const matchesQuery =
         !query ||
         [
@@ -126,7 +100,6 @@ const AssetTable = () => {
           r.location,
           r.site,
           r.assignedTo,
-          r.department,
         ]
           .join(" ")
           .toLowerCase()
@@ -138,16 +111,16 @@ const AssetTable = () => {
 
       return matchesQuery && matchesStatus && matchesCategory && matchesSub;
     });
-  }, [query, statusFilter, categoryFilter, subCategoryFilter]);
+  }, [assets, query, statusFilter, categoryFilter, subCategoryFilter]);
 
-  const openAssignModal = (assetTagId) => {
-    setActiveAssetId(assetTagId);
+  const openAssignModal = (assetId) => {
+    setActiveAssetId(assetId);
     setSelectedEmployee("");
     setIsAssignOpen(true);
   };
 
-  const openCheckinModal = (assetTagId) => {
-    setActiveAssetId(assetTagId);
+  const openCheckinModal = (assetId) => {
+    setActiveAssetId(assetId);
     setIsCheckinOpen(true);
   };
 
@@ -158,21 +131,33 @@ const AssetTable = () => {
     setSelectedEmployee("");
   };
 
-  const handleAssign = () => {
-    if (!selectedEmployee) return;
-    setAssetStates(prev => ({
-      ...prev,
-      [activeAssetId]: true,
-    }));
-    closeModals();
-  };
-
-  const handleCheckinConfirm = (confirm) => {
-    if (confirm) {
+  const handleAssign = async () => {
+    if (!selectedEmployee || !activeAssetId) return;
+    try {
+      await assetService.checkOutAsset({ assetId: Number(activeAssetId), employeeId: Number(selectedEmployee), checkOut: true });
       setAssetStates(prev => ({
         ...prev,
-        [activeAssetId]: false,
+        [activeAssetId]: true,
       }));
+      closeModals();
+    } catch (e) {
+      // keep modal open so user can retry/select again
+      // optionally, you can add toast here if available in this component tree
+      console.error('Checkout failed', e?.response?.data || e);
+    }
+  };
+
+  const handleCheckinConfirm = async (confirm) => {
+    if (confirm && activeAssetId) {
+      try {
+        await assetService.checkOutAsset({ assetId: Number(activeAssetId), checkOut: false });
+        setAssetStates(prev => ({
+          ...prev,
+          [activeAssetId]: false,
+        }));
+      } catch (e) {
+        console.error('Check-in failed', e?.response?.data || e);
+      }
     }
     closeModals();
   };
@@ -199,7 +184,7 @@ const AssetTable = () => {
             <option value="All">Status</option>
             <option value="Assigned">Assigned</option>
             <option value="Available">Available</option>
-            <option value="Maintenance">Maintenance</option>
+            <option value="Under Maintenance">Under Maintenance</option>
             <option value="Broken">Broken</option>
           </select>
           <select
@@ -208,9 +193,9 @@ const AssetTable = () => {
             onChange={(e) => setCategoryFilter(e.target.value)}
           >
             <option value="All">Category</option>
-            {categories.map((c) => (
+            {categories && categories.length > 0 ? categories.map((c) => (
               <option key={c} value={c}>{c}</option>
-            ))}
+            )) : null}
           </select>
           <select
             className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200 shadow-sm sm:col-span-1"
@@ -218,9 +203,9 @@ const AssetTable = () => {
             onChange={(e) => setSubCategoryFilter(e.target.value)}
           >
             <option value="All">Sub Category</option>
-            {subCategories.map((c) => (
+            {subCategories && subCategories.length > 0 ? subCategories.map((c) => (
               <option key={c} value={c}>{c}</option>
-            ))}
+            )) : null}
           </select>
         </div>
       </div>
@@ -237,41 +222,60 @@ const AssetTable = () => {
               <HeaderCell>Location</HeaderCell>
               <HeaderCell>Site</HeaderCell>
               <HeaderCell>Assigned To</HeaderCell>
-              <HeaderCell>Department</HeaderCell>
               <HeaderCell className="text-right">Actions</HeaderCell>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
             {filtered.map((r, idx) => (
-              <tr key={r.assetTagId} className={`hover:bg-slate-50/60 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/20"}`}>
+              <tr key={r.id ?? r.assetTagId} className={`hover:bg-slate-50/60 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/20"}`}>
                 <td className="py-3 px-4">{statusBadge(r.status)}</td>
                 <td className="py-3 px-4 text-blue-600 font-semibold whitespace-nowrap">{r.assetTagId}</td>
                 <td className="py-3 px-4 text-slate-700 whitespace-nowrap">{r.model}</td>
-                <td className="py-3 px-4 text-slate-700 whitespace-nowrap">{r.category}</td>
-                <td className="py-3 px-4 text-slate-700 whitespace-nowrap">{r.subCategory}</td>
-                <td className="py-3 px-4 text-slate-700 whitespace-nowrap">{r.location}</td>
-                <td className="py-3 px-4 text-slate-700 whitespace-nowrap">{r.site}</td>
+                <td className="py-3 px-4 text-slate-700 whitespace-nowrap">
+                  {typeof r.category === 'object' ? r.category?.name : r.category}
+                </td>
+                <td className="py-3 px-4 text-slate-700 whitespace-nowrap">
+                  {typeof r.subCategory === 'object' ? r.subCategory?.name : r.subCategory}
+                </td>
+                <td className="py-3 px-4 text-slate-700 whitespace-nowrap">
+                  {typeof r.location === 'object' 
+                    ? (r.location?.name || r.location?.location)
+                    : r.location}
+                </td>
+                <td className="py-3 px-4 text-slate-700 whitespace-nowrap">
+                  {typeof r.site === 'object' 
+                    ? (r.site?.name || r.site?.site)
+                    : r.site}
+                </td>
                 <td className="py-3 px-4 text-slate-700 whitespace-nowrap">{r.assignedTo}</td>
-                <td className="py-3 px-4 text-slate-700 whitespace-nowrap">{r.department}</td>
                 <td className="py-3 px-4">
                   <div className="flex items-center justify-end gap-2">
                     <button 
-                      onClick={() => router.push(`/dashboard/assets/${encodeURIComponent(r.assetTagId)}`)}
+                      onClick={() => {
+                        // Prefer numeric DB id; fall back to numeric-looking strings only
+                        const raw = r.id ?? r.assetId;
+                        const numericId =
+                          typeof raw === 'number'
+                            ? raw
+                            : (typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : null);
+                        if (!numericId) return; // don't navigate if we cannot determine a numeric id
+                        router.push(`/dashboard/assets/${numericId}`)
+                      }}
                       className="h-10 w-10 inline-flex items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-700 transition-all duration-200 shadow-sm hover:shadow-md"
                       aria-label="View asset details"
                     >
                       <FiEye className="h-5 w-5" />
                     </button>
                     <button 
-                      onClick={() => (assetStates[r.assetTagId] ? openCheckinModal(r.assetTagId) : openAssignModal(r.assetTagId))}
+                      onClick={() => (assetStates[r.id] ? openCheckinModal(r.id) : openAssignModal(r.id))}
                       className={`h-10 w-10 inline-flex items-center justify-center rounded-full transition-all duration-200 ${
-                        assetStates[r.assetTagId]
+                        assetStates[r.id]
                           ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25 hover:bg-blue-600'
                           : 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600'
                       }`}
-                      aria-label={assetStates[r.assetTagId] ? "Toggle to left" : "Toggle to right"}
+                      aria-label={assetStates[r.id] ? "Toggle to left" : "Toggle to right"}
                     >
-                      {assetStates[r.assetTagId] ? (
+                      {assetStates[r.id] ? (
                         <FiArrowRight className="h-5 w-5" />
                       ) : (
                         <FiArrowLeft className="h-5 w-5" />
@@ -303,7 +307,7 @@ const AssetTable = () => {
                 >
                   <option value="">Select employee</option>
                   {employees.map((emp) => (
-                    <option key={emp} value={emp}>{emp}</option>
+                    <option key={emp.id} value={emp.id}>{emp.name}</option>
                   ))}
                 </select>
               </div>
