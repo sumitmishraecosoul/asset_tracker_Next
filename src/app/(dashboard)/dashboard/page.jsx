@@ -1,18 +1,79 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import MetricCard from "@/app/Components/MetricCard";
 import AssetCategoryCountTable from "@/app/Components/AssetCategoryCountTable";
 import { FiCheck, FiCalendar, FiTool, FiX } from "react-icons/fi";
+import { getAssetsByStatus } from "../../../../services/assetService";
 
 const DashboardPage = () => {
+  const [assetStatusData, setAssetStatusData] = useState({
+    "Available": 0,
+    "Assigned": 0,
+    "Under Maintenance": 0,
+    "Broken": 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchAssetStatus = async () => {
+      try {
+        setLoading(true);
+        const response = await getAssetsByStatus();
+        if (response.data && response.data.data) {
+          setAssetStatusData(response.data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching asset status:", err);
+        setError("Failed to load asset status data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssetStatus();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-6 w-full">
+        <div>
+          <h2 className="text-black text-4xl font-bold mb-3">Dashboard</h2>
+          <p className="text-black text-lg mb-6">Welcome back! Here's what's happening with your assets today.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="h-24 bg-gray-200 rounded-lg"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 w-full">
+        <div>
+          <h2 className="text-black text-4xl font-bold mb-3">Dashboard</h2>
+          <p className="text-red-500 text-lg mb-6">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 w-full">
       <div>
         <h2 className="text-black text-4xl font-bold mb-3">Dashboard</h2>
         <p className="text-black text-lg mb-6">Welcome back! Here's what's happening with your assets today.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MetricCard value={423} title="Assigned" color="blue" icon={<FiCheck className="h-5 w-5" />} />
-          <MetricCard value={129} title="Available" color="green" icon={<FiCalendar className="h-5 w-5" />} />
-          <MetricCard value={18} title="Maintenance" color="orange" icon={<FiTool className="h-5 w-5" />} />
-          <MetricCard value={7} title="Broken" color="red" icon={<FiX className="h-5 w-5" />} />
+          <MetricCard value={assetStatusData["Assigned"]} title="Assigned" color="blue" icon={<FiCheck className="h-5 w-5" />} />
+          <MetricCard value={assetStatusData["Available"]} title="Available" color="green" icon={<FiCalendar className="h-5 w-5" />} />
+          <MetricCard value={assetStatusData["Under Maintenance"]} title="Maintenance" color="orange" icon={<FiTool className="h-5 w-5" />} />
+          <MetricCard value={assetStatusData["Broken"]} title="Broken" color="red" icon={<FiX className="h-5 w-5" />} />
         </div>
       </div>
 
@@ -24,7 +85,7 @@ const DashboardPage = () => {
       </div>
     </div>
   );
-}
+};
 
 export default DashboardPage;
 

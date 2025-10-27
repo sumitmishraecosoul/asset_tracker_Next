@@ -6,6 +6,8 @@ export const getAssetsById = (id) => api.get(`/asset/getAssetsById`, { params: {
 export const createAssets = (data) => api.post("/asset/createAssets", data);
 export const checkOutAsset = (data) => api.post("/asset/checkOut", data);
 export const deleteAssets = (id) => api.delete(`/asset/deleteAssets`, { params: { id } });
+export const getAssetsByStatus = () => api.get("/asset/getAssetsByStatus");
+export const getAssetsCountByCategory = () => api.get("/asset/getAssetsCountByCategory");
 
 export default {
   getAllAssets,
@@ -13,6 +15,8 @@ export default {
   createAssets,
   checkOutAsset,
   deleteAssets,
+  getAssetsByStatus,
+  getAssetsCountByCategory,
 };
 
 
