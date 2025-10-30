@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const LoginPage = () => {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -10,7 +12,10 @@ const LoginPage = () => {
   function handleSubmit(e) {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => setIsSubmitting(false), 800);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      router.push("/dashboard");
+    }, 800);
   }
 
   return (
